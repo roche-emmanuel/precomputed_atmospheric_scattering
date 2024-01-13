@@ -457,7 +457,7 @@ GLuint NewTexture3d(int width, int height, int depth, GLenum format,
   return texture;
 }
 
-const std::string data_dir="D:\\Projects\\NervHome\\data\\atmo_tests\\"
+const std::string data_dir="D:\\Projects\\NervHome\\data\\atmo_tests\\";
 
 /** Function used to save a texture 2d */
 // Function to download texture data and save it to a raw file
@@ -1147,7 +1147,7 @@ void Model::Precompute(
     unsigned int num_scattering_orders) {
   static int iteration = 0;
   iteration++;
-  std::string prefix = "ref_iter"+std::tostring(iteration);
+  std::string prefix = "ref_iter"+std::to_string(iteration);
 
   // The precomputations require specific GLSL programs, for each precomputation
   // step. We create and compile them here (they are automatically destroyed
@@ -1184,7 +1184,7 @@ void Model::Precompute(
   DrawQuad({}, full_screen_quad_vao_);
 
   // Step 0 - Transmittance
-  SaveTransmittance(transmittance_texture_, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, prefix+"_s0_o0_transmittance.raw");
+  SaveTransmittance(transmittance_texture_, prefix+"_s0_o0_transmittance.raw");
 
   // Compute the direct irradiance, store it in delta_irradiance_texture and,
   // depending on 'blend', either initialize irradiance_texture_ with zeros or
@@ -1243,7 +1243,7 @@ void Model::Precompute(
   for (unsigned int scattering_order = 2;
        scattering_order <= num_scattering_orders;
        ++scattering_order) {
-    std:string prefix2 = prefix+"_sca"+std::tostring(scattering_order);
+    std::string prefix2 = prefix+"_sca"+std::to_string(scattering_order);
 
     // Compute the scattering density, and store it in
     // delta_scattering_density_texture.
