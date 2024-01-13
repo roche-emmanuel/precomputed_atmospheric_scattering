@@ -1236,7 +1236,7 @@ void Model::Precompute(
   // Step 2 - Single scattering
   SaveScattering(delta_rayleigh_scattering_texture, prefix+"_s2_o0_delta_rayleigh.raw");
   SaveScattering(delta_mie_scattering_texture, prefix+"_s2_o1_delta_mie.raw");
-  SaveScattering(scattering_texture_, prefix+"_s2_o3_scattering.raw");
+  SaveScattering(scattering_texture_, prefix+"_s2_o2_scattering.raw");
 
 
   // Compute the 2nd, 3rd and 4th order of scattering, in sequence.
