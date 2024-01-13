@@ -1274,7 +1274,7 @@ void Model::Precompute(
     }
 
     // Step 3 - Scattering density
-    SaveScattering(delta_rayleigh_scattering_texture, prefix2+"_s3_o0_delta_rayleigh.raw");
+    SaveScattering(delta_scattering_density_texture, prefix2+"_s3_o0_scattering_density.raw");
     
     // Compute the indirect irradiance, store it in delta_irradiance_texture and
     // accumulate it in irradiance_texture_.
@@ -1299,6 +1299,10 @@ void Model::Precompute(
         scattering_order - 1);
     DrawQuad({false, true}, full_screen_quad_vao_);
 
+    // Step 4 - Indirect Irradiance
+    SaveIrradiance(delta_irradiance_texture, prefix2+"_s4_o0_delta_irradiance.raw");
+    SaveIrradiance(irradiance_texture_, prefix2+"_s4_o1_irradiance.raw");
+
     // Compute the multiple scattering, store it in
     // delta_multiple_scattering_texture, and accumulate it in
     // scattering_texture_.
@@ -1319,7 +1323,12 @@ void Model::Precompute(
       compute_multiple_scattering.BindInt("layer", layer);
       DrawQuad({false, true}, full_screen_quad_vao_);
     }
+
+    // Step 5 - Multiple scattering
+    SaveScattering(delta_multiple_scattering_texture, prefix2+"_s5_o0_delta_multiple_scattering.raw");
+    SaveScattering(scattering_texture_, prefix2+"_s5_o1_scattering.raw");
   }
+
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, 0, 0);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, 0, 0);
   glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, 0, 0);
