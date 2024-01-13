@@ -1203,7 +1203,7 @@ void Model::Precompute(
 
   // Step 1 - Direct irradiance
   SaveIrradiance(delta_irradiance_texture, prefix+"_s1_o0_delta_irradiance.raw");
-  SaveIrradiance(delta_irradiance_texture, prefix+"_s1_o1_irradiance.raw");
+  SaveIrradiance(irradiance_texture_, prefix+"_s1_o1_irradiance.raw");
 
   // Compute the rayleigh and mie single scattering, store them in
   // delta_rayleigh_scattering_texture and delta_mie_scattering_texture, and
