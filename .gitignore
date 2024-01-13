@@ -1,3 +1,9 @@
 output/**
 *.glsl.inc
 
+platform/windows/_intermediate/**
+platform/windows/external/**
+platform/windows/*.raw
+
+bin/freeglut.dll
+bin/Atmosphere.exe

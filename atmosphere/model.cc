@@ -49,6 +49,8 @@ of the following C++ code.
 #include <cmath>
 #include <iostream>
 #include <memory>
+#include <fstream>
+#include <vector>
 
 #include "atmosphere/constants.h"
 
@@ -453,6 +455,86 @@ GLuint NewTexture3d(int width, int height, int depth, GLenum format,
   glTexImage3D(GL_TEXTURE_3D, 0, internal_format, width, height, depth, 0,
       format, GL_FLOAT, NULL);
   return texture;
+}
+
+const std::string data_dir="D:\\Projects\\NervHome\\data\\atmo_tests\\"
+
+/** Function used to save a texture 2d */
+// Function to download texture data and save it to a raw file
+void SaveTexture2DToRawFile(GLuint texture, int width, int height, const std::string& filename) {
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    // Allocate memory to store the texture data
+    std::vector<float> textureData(width * height * 4); // Assuming RGBA format and floating-point values
+
+    // Get the texture data
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, textureData.data());
+
+    // Save the texture data to a raw file
+    std::ofstream file(data_dir+filename, std::ios::binary);
+    if (file.is_open()) {
+        file.write(reinterpret_cast<const char*>(textureData.data()), textureData.size() * sizeof(float));
+        file.close();
+        std::cout << "Texture data saved to: " << filename << std::endl;
+    } else {
+        std::cerr << "Error opening file for writing: " << filename << std::endl;
+    }
+}
+
+#if 0
+// Function to save a 3D texture to a raw file
+void SaveTexture3DToRawFile(GLuint texture, int width, int height, int depth, GLenum format, const std::string& filename) {
+    glBindTexture(GL_TEXTURE_3D, texture);
+
+    // Allocate memory to store the texture data
+    std::vector<float> textureData(width * height * depth * 4); // Assuming RGBA format and floating-point values
+
+    // Get the texture data
+    glGetTexImage(GL_TEXTURE_3D, 0, format, GL_FLOAT, textureData.data());
+
+    // Save the texture data to a raw file
+    std::ofstream file(data_dir+filename, std::ios::binary);
+    if (file.is_open()) {
+        file.write(reinterpret_cast<const char*>(textureData.data()), textureData.size() * sizeof(float));
+        file.close();
+        std::cout << "3D Texture data saved to: " << filename << std::endl;
+    } else {
+        std::cerr << "Error opening file for writing: " << filename << std::endl;
+    }
+}
+#else 
+// Function to save a 3D texture with GL_RGBA16F internal format to a raw file
+void SaveTexture3DToRawFile(GLuint texture, int width, int height, int depth, const std::string& filename) {
+    glBindTexture(GL_TEXTURE_3D, texture);
+
+    // Allocate memory to store the texture data
+    std::vector<GLhalf> textureData(width * height * depth * 4); // Assuming GL_RGBA16F format and half-precision values
+
+    // Get the texture data
+    glGetTexImage(GL_TEXTURE_3D, 0, GL_RGBA, GL_HALF_FLOAT, textureData.data());
+
+    // Save the texture data to a raw file
+    std::ofstream file(data_dir+filename, std::ios::binary);
+    if (file.is_open()) {
+        file.write(reinterpret_cast<const char*>(textureData.data()), textureData.size() * sizeof(GLhalf));
+        file.close();
+        std::cout << "3D Texture data saved to: " << filename << std::endl;
+    } else {
+        std::cerr << "Error opening file for writing: " << filename << std::endl;
+    }
+}
+#endif
+
+static void SaveTransmittance(GLuint texture, const std::string& filename) {
+  SaveTexture2DToRawFile(texture, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, filename);
+}
+
+static void SaveIrradiance(GLuint texture, const std::string& filename) {
+  SaveTexture2DToRawFile(texture, IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT, filename);
+}
+
+static void SaveScattering(GLuint texture, const std::string& filename) {
+  SaveTexture3DToRawFile(texture, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH, filename);
 }
 
 /*
@@ -961,6 +1043,8 @@ void Model::Init(unsigned int num_scattering_orders) {
     glViewport(0, 0, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT);
     compute_transmittance.Use();
     DrawQuad({}, full_screen_quad_vao_);
+
+    
   }
 
   // Delete the temporary resources allocated at the begining of this method.
@@ -972,6 +1056,11 @@ void Model::Init(unsigned int num_scattering_orders) {
   glDeleteTextures(1, &delta_rayleigh_scattering_texture);
   glDeleteTextures(1, &delta_irradiance_texture);
   assert(glGetError() == 0);
+
+  // Write the texture data to file:
+  SaveTransmittance(transmittance_texture_, "ref_final_transmittance.raw");
+  SaveScattering(scattering_texture_, "ref_final_scattering.raw");
+  SaveIrradiance(irradiance_texture_, "ref_final_irradiance.raw");
 }
 
 /*
@@ -1056,6 +1145,10 @@ void Model::Precompute(
     const mat3& luminance_from_radiance,
     bool blend,
     unsigned int num_scattering_orders) {
+  static int iteration = 0;
+  iteration++;
+  std::string prefix = "ref_iter"+std::tostring(iteration);
+
   // The precomputations require specific GLSL programs, for each precomputation
   // step. We create and compile them here (they are automatically destroyed
   // when this method returns, via the Program destructor).
@@ -1090,6 +1183,9 @@ void Model::Precompute(
   compute_transmittance.Use();
   DrawQuad({}, full_screen_quad_vao_);
 
+  // Step 0 - Transmittance
+  SaveTransmittance(transmittance_texture_, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT, prefix+"_s0_o0_transmittance.raw");
+
   // Compute the direct irradiance, store it in delta_irradiance_texture and,
   // depending on 'blend', either initialize irradiance_texture_ with zeros or
   // leave it unchanged (we don't want the direct irradiance in
@@ -1104,6 +1200,10 @@ void Model::Precompute(
   compute_direct_irradiance.BindTexture2d(
       "transmittance_texture", transmittance_texture_, 0);
   DrawQuad({false, blend}, full_screen_quad_vao_);
+
+  // Step 1 - Direct irradiance
+  SaveIrradiance(delta_irradiance_texture, prefix+"_s1_o0_delta_irradiance.raw");
+  SaveIrradiance(delta_irradiance_texture, prefix+"_s1_o1_irradiance.raw");
 
   // Compute the rayleigh and mie single scattering, store them in
   // delta_rayleigh_scattering_texture and delta_mie_scattering_texture, and
@@ -1133,10 +1233,18 @@ void Model::Precompute(
     DrawQuad({false, false, blend, blend}, full_screen_quad_vao_);
   }
 
+  // Step 2 - Single scattering
+  SaveScattering(delta_rayleigh_scattering_texture, prefix+"_s2_o0_delta_rayleigh.raw");
+  SaveScattering(delta_mie_scattering_texture, prefix+"_s2_o1_delta_mie.raw");
+  SaveScattering(scattering_texture_, prefix+"_s2_o3_scattering.raw");
+
+
   // Compute the 2nd, 3rd and 4th order of scattering, in sequence.
   for (unsigned int scattering_order = 2;
        scattering_order <= num_scattering_orders;
        ++scattering_order) {
+    std:string prefix2 = prefix+"_sca"+std::tostring(scattering_order);
+
     // Compute the scattering density, and store it in
     // delta_scattering_density_texture.
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
@@ -1165,6 +1273,9 @@ void Model::Precompute(
       DrawQuad({}, full_screen_quad_vao_);
     }
 
+    // Step 3 - Scattering density
+    SaveScattering(delta_rayleigh_scattering_texture, prefix2+"_s3_o0_delta_rayleigh.raw");
+    
     // Compute the indirect irradiance, store it in delta_irradiance_texture and
     // accumulate it in irradiance_texture_.
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
